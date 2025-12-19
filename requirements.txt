@@ -2,3 +2,8 @@ fastapi
 uvicorn
 pydub
 python-multipart
+spleeter
+librosa
+passlib[bcrypt]
+python-jose
+stripe
