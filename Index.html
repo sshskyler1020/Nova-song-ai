@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>🔥 AI Song Enhancer</title>
+<style>
+body { background: linear-gradient(135deg,#8b0000,#ff0000); color:white; font-family:Arial; text-align:center; }
+input, select, button { margin:10px; padding:12px; border-radius:8px; border:none; font-size:16px; }
+button { background:#ff4500; color:white; font-weight:bold; cursor:pointer; }
+#bar { width:0%; height:20px; background:#ff4500; border-radius:10px; }
+#progress-bar { width:80%; background:#333; border-radius:10px; margin:20px auto; }
+a { color:#fff; font-weight:bold; display:block; margin-top:20px; text-decoration:none; }
+</style>
+</head>
+<body>
+
+<h1>🔥 AI Song Enhancer</h1>
+
+<div id="auth-section">
+  <input type="email" id="email" placeholder="Email"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button onclick="signup()">Sign Up</button>
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="job-section" style="display:none;">
+  <input type="file" id="vocals" multiple accept=".wav"><br>
+  <input type="file" id="beat" accept=".wav"><br>
+  <select id="preset">
+    <option value="hiphop_trap">Hip-Hop Trap</option>
+    <option value="hiphop_boom_bap">Hip-Hop Boom Bap</option>
+    <option value="pop_dance">Pop Dance</option>
+  </select><br>
+  <button onclick="startJob()">Start Processing</button>
+  
+  <div id="progress-bar"><div id="bar"></div></div>
+  <a id="download" style="display:none;">Download Final Song</a>
+</div>
+
+<script>
+let token = null;
+let jobId = null;
+
+async function signup(){
+    const form = new FormData();
+    form.append("email", document.getElementById("email").value);
+    form.append("password", document.getElementById("password").value);
+
+    const res = await fetch("https://ai-song-enhancer.onrender.com/signup", {
+        method:"POST",
+        body: form
+    });
+    const data = await res.json();
+    if(data.token){
+        token = data.token;
+        alert("Signed up successfully!");
+        showJobSection();
+    } else {
+        alert("Error: " + (data.error || "Unknown error"));
+    }
+}
+
+async function login(){
+    const form = new FormData();
+    form.append("email", document.getElementById("email").value);
+    form.append("password", document.getElementById("password").value);
+
+    const res = await fetch("https://ai-song-enhancer.onrender.com/login", {
+        method:"POST",
+        body: form
+    });
+    const data = await res.json();
+    if(data.token){
+        token = data.token;
+        alert("Logged in successfully!");
+        showJobSection();
+    } else {
+        alert("Invalid credentials");
+    }
+}
+
+function showJobSection(){
+    document.getElementById("auth-section").style.display="none";
+    document.getElementById("job-section").style.display="block";
+}
+
+async function startJob(){
+    if(!token){
+        alert("Please login first!");
+        return;
+    }
+    const form = new FormData();
+    form.append("token", token);
+    form.append("preset", document.getElementById("preset").value);
+    const vocals = document.getElementById("vocals").files;
+    const beat = document.getElementById("beat").files[0];
+
+    if(vocals.length===0 || !beat){
+        alert("Please select vocals and beat files.");
+        return;
+    }
+
+    for(let i=0;i<vocals.length;i++){
+        form.append("vocals", vocals[i]);
+    }
+    form.append("beat", beat);
+
+    const res = await fetch("https://ai-song-enhancer.onrender.com/start-job", {
+        method:"POST",
+        body: form
+    });
+    const data = await res.json();
+    if(data.job_id){
+        jobId = data.job_id;
+        document.getElementById("download").style.display="none";
+        pollProgress();
+    } else {
+        alert("Failed to start job");
+    }
+}
+
+async function pollProgress(){
+    if(!jobId) return;
+    const res = await fetch(`https://ai-song-enhancer.onrender.com/progress/${jobId}`);
+    const data = await res.json();
+    document.getElementById("bar").style.width = (data.progress||0) + "%";
+
+    if(data.status==="done"){
+        const dl = document.getElementById("download");
+        dl.href = `https://ai-song-enhancer.onrender.com/download/${jobId}`;
+        dl.style.display="block";
+    } else if(data.status==="error"){
+        alert("Processing error: "+data.error);
+    } else {
+        setTimeout(pollProgress, 1500);
+    }
+}
+</script>
+
+</body>
+</html>
